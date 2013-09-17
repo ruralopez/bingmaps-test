@@ -1,0 +1,269 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<head>
+    <title>Client Side Clustering Test App</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	
+    <!-- Add a reference to the Bing Maps Control -->
+    <script charset="UTF-8" type="text/javascript" src="http://ecn.dev.virtualearth.net/mapcontrol/mapcontrol.ashx?v=7.0"></script>
+	
+    <!-- Add a reference to the Client Side Clustering modular plugin -->
+    <script type="text/javascript" src="script/minified/V7ClientSideClustering-min.js"></script>
+    
+    <!-- This is a reference to a class for generating test data. Not needed in production apps. -->
+    <script type="text/javascript" src="script/TestDataGenerator.js"></script>
+	
+    <script type="text/javascript">
+	    var greenLayer, redLayer, map;
+
+	    function GetMap() {
+	        map = new Microsoft.Maps.Map(document.getElementById("myMap"),
+                         { credentials: "Ar68-tKrKTTwzHDleJ9cdkPbn7VaTWWNQZXJmcwAjU_s33ARtdghuEnrvSh3QzFY" });
+
+	        //Define custom properties for the pushpin class 
+            //(this is needed for the infobox and not the clustering) 
+	        Microsoft.Maps.Pushpin.prototype.title = null;
+	        Microsoft.Maps.Pushpin.prototype.description = null;
+	        
+	        //create green layer
+	        greenLayer = new ClusteredEntityCollection(map, {
+	            singlePinCallback: createGreenPin,
+	            clusteredPinCallback: createGreenClusteredPin,
+                callback: CreateGreenDataList
+	        });
+
+	        //create red layer
+	        redLayer = new ClusteredEntityCollection(map, {
+	            singlePinCallback: createRedPin,
+	            clusteredPinCallback: createRedClusteredPin
+	        });
+	    }
+
+	    /* Shape Creating functions */
+	    function createGreenPin(data) {
+	        var pin = new Microsoft.Maps.Pushpin(data._LatLong, {
+	            icon: 'images/greenDot.gif',
+	            anchor: new Microsoft.Maps.Point(8, 8),
+	            width: 19,
+	            height: 19
+	        });
+
+	        pin.title = "Single Green Location";
+	        pin.description = "GridKey: " + data.GridKey;
+
+	        //Add handler for the pushpin click event.
+	        Microsoft.Maps.Events.addHandler(pin, 'click', displayEventInfo);
+
+	        return pin;
+	    }
+
+	    function createGreenClusteredPin(cluster, latlong) {
+	        var pin = new Microsoft.Maps.Pushpin(latlong, {
+	            icon: 'images/greenCircle.gif',
+	            anchor: new Microsoft.Maps.Point(8, 8),
+	            width: 16, 
+                height: 16 }); 
+
+	        pin.title = "Green Cluster";
+	        pin.description = "GridKey: " + cluster[0].GridKey + "</br>Cluster Size: " + cluster.length + "</br>Zoom in for more details.";
+
+	        //Add handler for the pushpin click event.
+	        Microsoft.Maps.Events.addHandler(pin, 'click', displayEventInfo);
+
+	        return pin;
+	    }
+
+	    function createRedPin(data) {
+	        var pin = new Microsoft.Maps.Pushpin(data._LatLong, {
+	            icon: 'images/redDot.gif',
+	            anchor: new Microsoft.Maps.Point(8, 8),
+	            width: 19,
+	            height: 19});
+
+	        pin.title = "Single Red Location";
+	        pin.description = "GridKey: " + data.GridKey;
+
+	        //Add handler for the pushpin click event.
+	        Microsoft.Maps.Events.addHandler(pin, 'click', displayEventInfo);
+
+	        return pin;
+	    }
+
+	    function createRedClusteredPin(cluster, latlong) {
+	        var pin = new Microsoft.Maps.Pushpin(latlong, { 
+                icon: 'images/redCircle.gif',
+	            anchor: new Microsoft.Maps.Point(8, 8),
+	            width: 16, 
+                height: 16 });
+
+	        pin.title = 'Red Cluster';
+	        pin.description = "GridKey: " + cluster[0].GridKey + "</br>Cluster Size: " + cluster.length + "</br>Zoom in for more details.";
+
+	        //Add handler for the pushpin click event.
+	        Microsoft.Maps.Events.addHandler(pin, 'click', displayEventInfo);
+
+	        return pin;
+	    }
+
+	    /* Data Request Handlers */
+	    function RequestData(elementId, callback) {
+	        var size = parseInt(document.getElementById(elementId).value);
+	        TestDataGenerator.GenerateData(size, callback);
+	    }
+
+	    function RequestGreenDataCallback(response) {
+	        if (response != null) {
+	            greenLayer.SetData(response);
+	        }
+	    }
+
+	    function RequestRedDataCallback(response) {
+	        if (response != null) {
+	            redLayer.SetData(response);
+	        }
+	    }
+
+	    /* Data list creater */
+	    function CreateGreenDataList() {
+	        if (greenLayer != null) {
+	            var data = greenLayer.GetDisplayedData();
+	            var output = [];
+
+	            for (var i = 0; i < data.length; i++) {
+	                output.push("<a href='javascript:void(0);' onclick='ShowInfoboxByGridKey(", data[i].GridKey, ",greenLayer);'>");
+	                output.push(data[i].Name, "</a></br>");
+	            }
+
+	            document.getElementById('greenDataOutput').innerHTML = output.join('');
+	        }
+	    }
+
+	    /* Data selected, show infobox */
+
+	    function ShowInfoboxByGridKey(gridKey, layer) {
+	        var pin = layer.GetPinByGridKey(gridKey);
+	        ShowInfobox(pin);
+	    }
+
+	    /* Layer Options Examples */
+
+	    function ChangePlacementType(dropDownID, layer) {
+	        var dropdown = document.getElementById(dropDownID);
+	        var type = parseInt(dropdown.options[dropdown.selectedIndex].value);
+	        layer.SetOptions({ clusterPlacementType: type });
+	    }
+
+	    function OffsetLayer(xID, yID, layer) {
+	        var x = parseInt(document.getElementById(xID).value);
+	        var y = parseInt(document.getElementById(yID).value);
+	        var offset = new Microsoft.Maps.Point(x, y);
+	        layer.SetOptions({ layerOffset: offset });
+	    }
+
+	    function ChangeGridSize(sizeID, layer) {
+	        var size = parseInt(document.getElementById(sizeID).value);
+	        layer.SetOptions({ gridSize: size });
+	    }
+
+	    function DisableClustering(layer) {
+	        layer.SetOptions({ clusteringEnabled: false });
+	    }
+
+	    function EnableClustering(layer) {
+	        layer.SetOptions({ clusteringEnabled: true });
+	    }
+
+	    /*  
+	    * JavaScript below is for generating an infobox
+        * Code from http://msdn.microsoft.com/en-us/library/gg508987.aspx 
+        */
+
+	    function displayEventInfo(e) {
+	        if (e.targetType == "pushpin") {
+	            ShowInfobox(e.target);
+	        }
+	    }
+
+	    function ShowInfobox(shape) {
+	        var pix = map.tryLocationToPixel(shape.getLocation(), Microsoft.Maps.PixelReference.control);
+	        var infoboxTitle = document.getElementById('infoboxTitle');
+	        infoboxTitle.innerHTML = shape.title;
+	        var infoboxDescription = document.getElementById('infoboxDescription');
+	        infoboxDescription.innerHTML = shape.description;
+	        var infobox = document.getElementById('infoBox');
+	        infobox.style.top = (pix.y - 60) + "px";
+	        infobox.style.left = (pix.x + 5) + "px";
+	        infobox.style.visibility = "visible";
+	        document.getElementById('myMap').appendChild(infobox);
+	    }
+
+	    function closeInfoBox() {
+	        var infobox = document.getElementById('infoBox');
+	        infobox.style.visibility = "hidden";
+	    }
+    </script>
+</head>
+<body onload="GetMap();">
+    <div id='myMap' style="position:relative; width:600px; height:400px;"></div>
+    <div id='infoBox' style="visibility:hidden; position:absolute; top:0px; left:0px; width:260px; z-index:10000; font-family:Arial; font-size:10px">
+        <div id='infoboxText' style="background-color:White; border-style:solid; border-width:medium; border-color:DarkOrange; min-height:100px; position:absolute; top:0px; left:23px; width:240px; ">
+            <b id='infoboxTitle' style="position:absolute; top:10px; left:10px; width:220px;"></b>
+            <img src="images/CloseButton.gif" alt="close" onclick="closeInfoBox()" style="position:absolute;top:10px;right:10px;cursor:pointer;" />
+            <a id='infoboxDescription' style="position:absolute; top:30px; left:10px; width:220px;"></a>
+        </div>
+    </div>
+    
+    <br />
+    <div style='width:400px;border-right:solid 1px #000;float:left;padding:5px'>
+        Green Data<br /><br />
+        Data Size: <input type="text" id="greenDataSize" />
+        <input type="button" value="Get Data" onclick="RequestData('greenDataSize',RequestGreenDataCallback);" /><br /><br />
+        Clustered Icon Placement Type: 
+        <select id="greenClusterMethod" onchange="ChangePlacementType('greenClusterMethod',greenLayer);">
+            <option selected="selected" value="0">Mean Average</option>
+            <option value="1">Grid Center</option>
+            <option value="2">First Location</option>
+        </select> <br />
+        Layer offset: 
+        x: <input type="text" id="greenOffsetX" size="2" />
+        y: <input type="text" id="greenOffsetY" size="2" />
+        <input type="button" value="Offset" onclick="OffsetLayer('greenOffsetX','greenOffsetY',greenLayer);" />
+        <br />
+        Grid Size: 
+        <input type="text" id="greenGridSize" size="3" value="45" />
+        <input type="button" value="Update" onclick="ChangeGridSize('greenGridSize',greenLayer);" />
+        <br />
+        <input type="button" value="Bring to Front" onclick="greenLayer.BringLayerToFront();" />
+        <br />
+        <input type="button" value="Disable Clustering" onclick="DisableClustering(greenLayer);" />
+        <input type="button" value="Enable Clustering" onclick="EnableClustering(greenLayer);" />
+        <div id="greenDataOutput" style="max-height:250px;overflow-y:scroll;"></div>
+    </div>
+    <div style='width:400px;float:left;padding:5px'>
+        Red Data<br /><br />
+        Data Size: <input type="text" id="redDataSize" />
+        <input type="button" value="Get Data" onclick="RequestData('redDataSize',RequestRedDataCallback);" /><br /><br />
+        Clustered Icon Placement Type: 
+        <select id="redClusterMethod" onchange="ChangePlacementType('redClusterMethod',redLayer);">
+            <option selected="selected" value="0">Mean Average</option>
+            <option value="1">Grid Center</option>
+            <option value="2">First Location</option>
+        </select>  <br />
+        Layer offset: 
+        x: <input type="text" id="redOffsetX" size="2" />
+        y: <input type="text" id="redOffsetY" size="2" />
+        <input type="button" value="Offset" onclick="OffsetLayer('redOffsetX','redOffsetY',redLayer);" />
+        <br />
+        Grid Size: 
+        <input type="text" id="redGridSize" size="3" value="45" />
+        <input type="button" value="Update" onclick="ChangeGridSize('redGridSize',redLayer);" />
+        <br />
+        <input type="button" value="Bring to Front" onclick="redLayer.BringLayerToFront();" />
+        <br />
+        <input type="button" value="Disable Clustering" onclick="DisableClustering(redLayer);" />
+        <input type="button" value="Enable Clustering" onclick="EnableClustering(redLayer);" />
+    </div>
+</body>
+</html>
+

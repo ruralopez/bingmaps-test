@@ -1,0 +1,110 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<head>
+    <title>Client Side Clustering</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    <!-- Add a reference to the Bing Maps Control -->
+    <script charset="UTF-8" type="text/javascript" src="http://ecn.dev.virtualearth.net/mapcontrol/mapcontrol.ashx?v=7.0"></script>
+	
+    <!-- Add a reference to the Client Side Clustering modular plugin -->
+    <script type="text/javascript" src="script/minified/V7ClientSideClustering-min.js"></script>
+    
+     <!-- This is a reference to a class for generating test data. Not needed in production apps. -->
+    <script type="text/javascript" src="script/TestDataGenerator.js"></script>
+
+	<script type="text/javascript">
+	    var map;
+	    var myLayer;
+
+	    function GetMap() {
+	        map = new Microsoft.Maps.Map(document.getElementById("myMap"),
+                         { credentials: "Ar68-tKrKTTwzHDleJ9cdkPbn7VaTWWNQZXJmcwAjU_s33ARtdghuEnrvSh3QzFY" });
+
+	        //Define custom properties for the pushpin class (this is needed for the infobox and not the clustering) 
+	        Microsoft.Maps.Pushpin.prototype.title = null;
+	        Microsoft.Maps.Pushpin.prototype.description = null;
+
+	        myLayer = new ClusteredEntityCollection(map, {
+	            singlePinCallback: createPin,
+	            clusteredPinCallback: createClusteredPin
+	        });
+	    }
+
+	    function createPin(data) {
+	        var pin = new Microsoft.Maps.Pushpin(data._LatLong);
+
+	        pin.title = "Single Location";
+	        pin.description = "GridKey: " + data.GridKey;
+
+	        //Add handler for the pushpin click event.
+	        Microsoft.Maps.Events.addHandler(pin, 'click', displayEventInfo);
+
+	        return pin;
+	    }
+
+	    function createClusteredPin(cluster, latlong) {
+	        var pin = new Microsoft.Maps.Pushpin(latlong, { text: '+' });
+
+	        pin.title = "Cluster";
+	        pin.description = "GridKey: " + cluster[0].GridKey + "</br>Cluster Size: " + cluster.length + "</br>Zoom in for more details.";
+
+	        //Add handler for the pushpin click event.
+	        Microsoft.Maps.Events.addHandler(pin, 'click', displayEventInfo);
+
+	        return pin;
+	    }
+
+	    //Makes a request for data
+	    function RequestData() {
+	        var size = parseInt(document.getElementById('dataSize').value);
+	        TestDataGenerator.GenerateData(size, RequestDataCallback);
+	    }
+
+	    function RequestDataCallback(response) {
+	        if (response != null) {
+	            myLayer.SetData(response);
+	        }
+	    }
+
+	    /*  
+	    * JavaScript below is for generating an infobox
+	    * Code from http://msdn.microsoft.com/en-us/library/gg508987.aspx 
+	    */
+
+	    function displayEventInfo(e) {
+	        if (e.targetType == "pushpin") {
+	            var pix = map.tryLocationToPixel(e.target.getLocation(), Microsoft.Maps.PixelReference.control);
+	            var infoboxTitle = document.getElementById('infoboxTitle');
+	            infoboxTitle.innerHTML = e.target.title;
+	            var infoboxDescription = document.getElementById('infoboxDescription');
+	            infoboxDescription.innerHTML = e.target.description;
+	            var infobox = document.getElementById('infoBox');
+	            infobox.style.top = (pix.y - 60) + "px";
+	            infobox.style.left = (pix.x + 5) + "px";
+	            infobox.style.visibility = "visible";
+	            document.getElementById('myMap').appendChild(infobox);
+	        }
+	    }
+
+	    function closeInfoBox() {
+	        var infobox = document.getElementById('infoBox');
+	        infobox.style.visibility = "hidden";
+	    }
+    </script>
+</head>
+<body onload="GetMap();">
+    <div id='myMap' style="position:relative; width:100%; height:500px;"></div>
+    <div id='infoBox' style="visibility:hidden; position:absolute; top:0px; left:0px; width:260px; z-index:10000; font-family:Arial; font-size:10px">
+        <div id='infoboxText' style="background-color:White; border-style:solid; border-width:medium; border-color:DarkOrange; min-height:100px; position:absolute; top:0px; left:23px; width:240px; ">
+            <b id='infoboxTitle' style="position:absolute; top:10px; left:10px; width:220px;"></b>
+            <img src="images/CloseButton.gif" alt="close" onclick="closeInfoBox()" style="position:absolute;top:10px;right:10px;cursor:pointer;" />
+            <a id='infoboxDescription' style="position:absolute; top:30px; left:10px; width:220px;"></a>
+        </div>
+    </div><br />
+
+    Data Size: <input type="text" id="dataSize" /><br />
+    <input type="button" value="Get Mock Data" onclick="RequestData();" />
+</body>
+</html>
