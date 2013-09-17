@@ -31,7 +31,7 @@
 	            clusteredPinCallback: createClusteredPin
 	        });
 	    }
-
+	    //Crear un pin singular
 	    function createPin(data) {
 	        var pin = new Microsoft.Maps.Pushpin(data._LatLong);
 
@@ -43,7 +43,7 @@
 
 	        return pin;
 	    }
-
+	    //Crear un pin con cluster
 	    function createClusteredPin(cluster, latlong) {
 	        var pin = new Microsoft.Maps.Pushpin(latlong, { text: '+' });
 
